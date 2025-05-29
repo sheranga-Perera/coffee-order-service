@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- 1. Customer Table -->
+    <changeSet id="1" author="Sheranga">
+        <createTable tableName="customer">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="VARCHAR(225)"/>
+            <column name="mobile_number" type="VARCHAR(10)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 2. Menu Table -->
+    <changeSet id="2" author="Sheranga">
+        <createTable tableName="menu">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="shop_id" type="UUID"/>
+            <column name="item_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+
+    <!-- 3. Shop Table -->
+    <changeSet id="3" author="Sheranga">
+        <createTable tableName="shop">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(225)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="longitude" type="VARCHAR(225)"/>
+            <column name="latitude" type="VARCHAR(225)"/>
+            <column name="menu_id" type="UUID"/>
+            <column name="queues" type="INT"/>
+            <column name="max_queue_size" type="INT"/>
+            <column name="open_time" type="TIME"/>
+            <column name="close_time" type="TIME"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="shop"
+                                 baseColumnNames="menu_id"
+                                 referencedTableName="menu"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_shop_menu"/>
+    </changeSet>
+
+    <!-- 4. Queue Table -->
+    <changeSet id="4" author="Sheranga">
+        <createTable tableName="queue">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="customer_id" type="UUID"/>
+            <column name="shop_id" type="UUID"/>
+            <column name="max_size" type="INT"/>
+            <column name="current_size" type="INT"/>
+            <column name="status" type="VARCHAR(20)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="queue"
+                                 baseColumnNames="customer_id"
+                                 referencedTableName="customer"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_queue_customer"/>
+        <addForeignKeyConstraint baseTableName="queue"
+                                 baseColumnNames="shop_id"
+                                 referencedTableName="shop"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_queue_shop"/>
+    </changeSet>
+
+    <!-- 5. Orders Table -->
+    <changeSet id="5" author="Sheranga">
+        <createTable tableName="orders">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="customer_id" type="UUID"/>
+            <column name="shop_id" type="UUID"/>
+            <column name="menu_item" type="VARCHAR(100)"/>
+            <column name="queue_id" type="UUID"/>
+            <column name="queue_position" type="INT"/>
+            <column name="status" type="VARCHAR(20)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="orders"
+                                 baseColumnNames="customer_id"
+                                 referencedTableName="customer"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_orders_customer"/>
+        <addForeignKeyConstraint baseTableName="orders"
+                                 baseColumnNames="shop_id"
+                                 referencedTableName="shop"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_orders_shop"/>
+        <addForeignKeyConstraint baseTableName="orders"
+                                 baseColumnNames="queue_id"
+                                 referencedTableName="queue"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_orders_queue"/>
+    </changeSet>
+
+</databaseChangeLog>

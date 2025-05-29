@@ -1,0 +1,50 @@
+# Stage 1: Build the application
+FROM maven:3.9-amazoncorretto-17 AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy the POM file
+COPY pom.xml .
+
+# Download dependencies (this layer will be cached if pom.xml doesn't change)
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Build the application
+RUN mvn clean package -DskipTests
+
+# Stage 2: Create the runtime image
+FROM amazoncorretto:17-alpine
+
+# Add non-root user for security
+RUN addgroup -S spring && adduser -S spring -G spring
+
+# Set working directory
+WORKDIR /app
+
+# Copy the built artifact from builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Set ownership to spring user
+RUN chown spring:spring /app/app.jar
+
+# Switch to non-root user
+USER spring
+
+# Environment variables
+ENV SERVER_PORT=8081 \
+    SPRING_PROFILES_ACTIVE=prod \
+    JAVA_OPTS="-Xms512m -Xmx512m"
+
+# Expose the application port
+EXPOSE 8081
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:8081/coffee-order-service/actuator/health || exit 1
+
+# Start the application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
