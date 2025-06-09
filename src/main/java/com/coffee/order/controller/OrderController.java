@@ -4,10 +4,9 @@ import com.coffee.common.request.OrderRequest;
 import com.coffee.common.request.OrderStatusRequest;
 import com.coffee.common.response.CommonResponse;
 import com.coffee.order.service.OrderService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @RestController
 @RequestMapping("/api")
@@ -17,12 +16,12 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/orders")
-    public CommonResponse placeOrder(@RequestBody OrderRequest request){
+    public CommonResponse placeOrder(@Valid @RequestBody OrderRequest request){
         return orderService.placeOrder(request);
     }
 
     @PostMapping("/orders/status")
-    public CommonResponse changeOrderStatusById(@RequestBody OrderStatusRequest request){
+    public CommonResponse changeOrderStatusById(@Valid @RequestBody OrderStatusRequest request){
         return orderService.changeOrderStatusById(request);
     }
 
