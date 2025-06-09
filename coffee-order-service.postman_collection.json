@@ -1,0 +1,84 @@
+{
+    "info": {
+        "name": "Coffee Order Service",
+        "description": "API collection for Coffee Order Service",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Place Order",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/orders",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "orders"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"shopId\": \"7d1c1e90-ae7d-4a6c-8d9f-3c6b99c0d000\",\n    \"menuItem\": \"Cappuccino\",\n    \"quantity\": 2\n}"
+                },
+                "description": "Create a new coffee order"
+            }
+        },
+        {
+            "name": "Change Order Status",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/orders/status",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "orders", "status"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"orderId\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"orderStatus\": \"IN_PROGRESS\"\n}"
+                },
+                "description": "Update the status of an existing order"
+            }
+        },
+        {
+            "name": "Get Order Details",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{baseUrl}}/api/orders/550e8400-e29b-41d4-a716-446655440000",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "orders", "550e8400-e29b-41d4-a716-446655440000"]
+                },
+                "description": "Get details of a specific order"
+            }
+        },
+        {
+            "name": "Get Queue Position",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{baseUrl}}/api/orders/550e8400-e29b-41d4-a716-446655440000/queue-position",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "orders", "550e8400-e29b-41d4-a716-446655440000", "queue-position"]
+                },
+                "description": "Get current queue position of an order"
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8081/coffee-order-service",
+            "type": "string"
+        }
+    ]
+} 

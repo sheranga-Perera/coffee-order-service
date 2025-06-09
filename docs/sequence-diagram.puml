@@ -1,0 +1,78 @@
+@startuml Coffee Order Service - Sequence Diagram
+
+actor "Customer/Staff" as User
+participant "Frontend" as FE
+participant "AuthController" as Auth
+participant "JwtAuthFilter" as JWTFilter
+participant "OrderController" as OrderCtrl
+participant "OrderService" as OrderSvc
+database "Database" as DB
+
+== Authentication Flow ==
+User -> FE: Login Request
+FE -> Auth: POST /api/auth/login
+Auth -> DB: Validate Credentials
+DB --> Auth: User Details
+Auth -> Auth: Generate JWT Token
+Auth --> FE: JWT Token Response
+FE -> FE: Store Token
+
+== Place Order Flow ==
+User -> FE: Place Order Request
+FE -> JWTFilter: Request with JWT
+JWTFilter -> JWTFilter: Validate Token
+JWTFilter -> OrderCtrl: POST /api/orders
+OrderCtrl -> OrderSvc: placeOrder()
+OrderSvc -> DB: Check Shop Status
+DB --> OrderSvc: Shop Details
+OrderSvc -> DB: Find Available Queue
+DB --> OrderSvc: Queue Details
+OrderSvc -> DB: Save Order
+DB --> OrderSvc: Order Details
+OrderSvc -> OrderSvc: Calculate ETA
+OrderSvc --> OrderCtrl: Order Response
+OrderCtrl --> FE: Order Details with Queue Position
+FE --> User: Order Confirmation
+
+== Check Order Status Flow ==
+User -> FE: Check Order Status
+FE -> JWTFilter: Request with JWT
+JWTFilter -> JWTFilter: Validate Token
+JWTFilter -> OrderCtrl: GET /api/orders/{orderId}
+OrderCtrl -> OrderSvc: getOrderDetailsById()
+OrderSvc -> DB: Fetch Order
+DB --> OrderSvc: Order Details
+OrderSvc --> OrderCtrl: Order Status
+OrderCtrl --> FE: Order Status Response
+FE --> User: Display Order Status
+
+== Check Queue Position Flow ==
+User -> FE: Check Queue Position
+FE -> JWTFilter: Request with JWT
+JWTFilter -> JWTFilter: Validate Token
+JWTFilter -> OrderCtrl: GET /api/orders/{orderId}/queue-position
+OrderCtrl -> OrderSvc: getCurrentQueuePosition()
+OrderSvc -> DB: Fetch Order & Queue
+DB --> OrderSvc: Order & Queue Details
+OrderSvc -> OrderSvc: Calculate Updated ETA
+OrderSvc --> OrderCtrl: Queue Position & ETA
+OrderCtrl --> FE: Queue Position Response
+FE --> User: Display Position & ETA
+
+== Update Order Status Flow (Staff Only) ==
+User -> FE: Update Order Status
+FE -> JWTFilter: Request with JWT
+JWTFilter -> JWTFilter: Validate Token & Role
+JWTFilter -> OrderCtrl: POST /api/orders/status
+OrderCtrl -> OrderSvc: changeOrderStatusById()
+OrderSvc -> DB: Update Order Status
+alt Order Completed/Cancelled
+    OrderSvc -> DB: Update Queue
+    OrderSvc -> DB: Reorder Queue Positions
+end
+DB --> OrderSvc: Updated Order
+OrderSvc --> OrderCtrl: Status Update Response
+OrderCtrl --> FE: Success Response
+FE --> User: Status Update Confirmation
+
+@enduml 
