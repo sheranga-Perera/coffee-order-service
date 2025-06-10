@@ -44,15 +44,10 @@ public class OrderServiceImpl implements OrderService {
     public CommonResponse placeOrder(OrderRequest request) {
         CommonResponse commonResponse = new CommonResponse();
         try {
-            // Validate request
-            validateOrderRequest(request);
-
             // Check if shop exists and is open
             UUID shopUUID = UUID.fromString(request.getShopId());
             Shop shop = shopRepository.findById(shopUUID)
                     .orElseThrow(() -> new RuntimeException("Shop not found"));
-
-            validateShopOperatingHours(shop);
 
             // Find available queue
             Queue queue = queueRepository.findFirstAvailableQueue(shopUUID)
@@ -73,7 +68,6 @@ public class OrderServiceImpl implements OrderService {
                 Orders order = createOrder(request, queue, position, customerId);
                 Orders savedOrder = orderRepository.save(order);
 
-
                 // Prepare response
                 OrderResponse response = createOrderResponse(savedOrder, position);
                 CommonResponseMapper.successResponseMapper(commonResponse, response);
@@ -83,37 +77,6 @@ public class OrderServiceImpl implements OrderService {
             CommonResponseMapper.failureResponseMapper(commonResponse, ex);
         }
         return commonResponse;
-    }
-
-    private void validateOrderRequest(OrderRequest request) {
-        if (request == null) {
-            LOGGER.error("Order request cannot be null");
-            throw new RuntimeException("Order request cannot be null");
-        }
-        if (!StringUtils.hasText(request.getCustomerId())) {
-            LOGGER.error("Customer ID is required");
-            throw new RuntimeException("Customer ID is required");
-        }
-        if (!StringUtils.hasText(request.getShopId())) {
-            LOGGER.error("Shop ID is required");
-            throw new RuntimeException("Shop ID is required");
-        }
-        if (!StringUtils.hasText(request.getMenuItem())) {
-            LOGGER.error("Menu item is required");
-            throw new RuntimeException("Menu item is required");
-        }
-        if (request.getQuantity() <= 0) {
-            LOGGER.error("Quantity must be greater than 0");
-            throw new RuntimeException("Quantity must be greater than 0");
-        }
-    }
-
-    private void validateShopOperatingHours(Shop shop) {
-        LocalTime currentTime = LocalTime.now();
-        if (currentTime.isBefore(shop.getOpenTime()) || currentTime.isAfter(shop.getCloseTime())) {
-            throw new RuntimeException("Shop is currently closed. Operating hours: " +
-                    shop.getOpenTime() + " - " + shop.getCloseTime());
-        }
     }
 
     private Orders createOrder(OrderRequest request, Queue queue, int position, UUID customerId) {
