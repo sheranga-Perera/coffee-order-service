@@ -1,114 +1,91 @@
 package com.coffee.common.exception;
 
-import com.coffee.common.response.ErrorResponse;
-import jakarta.servlet.http.HttpServletRequest;
+import com.coffee.common.response.CommonResponse;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationExceptions(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<CommonResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-            errors.put(error.getField(), error.getDefaultMessage())
-        );
-        
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Failed")
-                .message("Invalid request parameters")
-                .path(request.getRequestURI())
-                .validationErrors(errors)
-                .build();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = error instanceof FieldError ? ((FieldError) error).getField() : error.getObjectName();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
 
-        logger.warn("Validation failed: {}", errors);
-        return ResponseEntity.badRequest().body(errorResponse);
+        String errorMessage = errors.entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue())
+                .collect(Collectors.joining(", "));
+
+        LOGGER.error("Validation error: {}", errorMessage);
+
+        CommonResponse response = new CommonResponse();
+        response.setStatusCode("400");
+        response.setStatusMessage("Validation Failed");
+        response.setTimestamp(Timestamp.from(Instant.now()));
+        response.setResult(errors);
+
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
-            ConstraintViolationException ex,
-            HttpServletRequest request) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getConstraintViolations().forEach(violation ->
-            errors.put(violation.getPropertyPath().toString(), violation.getMessage())
-        );
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<CommonResponse> handleConstraintViolationException(ConstraintViolationException ex) {
+        Map<String, String> errors = ex.getConstraintViolations().stream()
+                .collect(Collectors.toMap(
+                        violation -> getPropertyPath(violation),
+                        ConstraintViolation::getMessage,
+                        (error1, error2) -> error1
+                ));
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Failed")
-                .message("Invalid request parameters")
-                .path(request.getRequestURI())
-                .validationErrors(errors)
-                .build();
+        LOGGER.error("Constraint violation: {}", errors);
 
-        logger.warn("Constraint violation: {}", errors);
-        return ResponseEntity.badRequest().body(errorResponse);
+        CommonResponse response = new CommonResponse();
+        response.setStatusCode("400");
+        response.setStatusMessage("Validation Failed");
+        response.setTimestamp(Timestamp.from(Instant.now()));
+        response.setResult(errors);
+
+        return ResponseEntity.badRequest().body(response);
     }
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("Not Found")
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
+    @ExceptionHandler(RuntimeException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<CommonResponse> handleRuntimeException(RuntimeException ex) {
+        LOGGER.error("Runtime exception: {}", ex.getMessage());
 
-        logger.warn("Resource not found: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        CommonResponse response = new CommonResponse();
+        response.setStatusCode("500");
+        response.setStatusMessage(ex.getMessage());
+        response.setTimestamp(Timestamp.from(Instant.now()));
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessException(
-            BusinessException ex,
-            HttpServletRequest request) {
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Business Rule Violation")
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
-
-        logger.warn("Business exception: {}", ex.getMessage());
-        return ResponseEntity.badRequest().body(errorResponse);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleAllUncaughtException(
-            Exception ex,
-            HttpServletRequest request) {
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
-                .message("An unexpected error occurred")
-                .path(request.getRequestURI())
-                .build();
-
-        logger.error("Uncaught exception:", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    private String getPropertyPath(ConstraintViolation<?> violation) {
+        String propertyPath = violation.getPropertyPath().toString();
+        // Remove method name from property path if present
+        int lastDotIndex = propertyPath.lastIndexOf('.');
+        return lastDotIndex > 0 ? propertyPath.substring(lastDotIndex + 1) : propertyPath;
     }
 } 

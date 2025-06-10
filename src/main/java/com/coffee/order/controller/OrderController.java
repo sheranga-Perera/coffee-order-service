@@ -6,8 +6,6 @@ import com.coffee.common.response.CommonResponse;
 import com.coffee.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,8 +40,7 @@ public class OrderController {
     )
     @PostMapping("/orders")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<CommonResponse> placeOrder(
-            @Valid @RequestBody OrderRequest request) {
+    public ResponseEntity<CommonResponse> placeOrder(@Valid @RequestBody OrderRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(orderService.placeOrder(request));
     }
@@ -61,8 +58,7 @@ public class OrderController {
     )
     @PostMapping("/orders/status")
     @PreAuthorize("hasRole('STAFF')")
-    public ResponseEntity<CommonResponse> changeOrderStatusById(
-            @Valid @RequestBody OrderStatusRequest request) {
+    public ResponseEntity<CommonResponse> updateOrderStatus(@Valid @RequestBody OrderStatusRequest request) {
         return ResponseEntity.ok(orderService.changeOrderStatusById(request));
     }
 
@@ -78,7 +74,7 @@ public class OrderController {
     )
     @GetMapping("/orders/{orderId}")
     @PreAuthorize("hasAnyRole('USER', 'STAFF')")
-    public ResponseEntity<CommonResponse> getOrderDetailsById(
+    public ResponseEntity<CommonResponse> getOrderDetails(
             @Parameter(description = "ID of the order to retrieve")
             @PathVariable @NotBlank(message = "Order ID is required") String orderId) {
         return ResponseEntity.ok(orderService.getOrderDetailsById(orderId));
@@ -96,7 +92,7 @@ public class OrderController {
     )
     @GetMapping("/orders/{orderId}/queue-position")
     @PreAuthorize("hasAnyRole('USER', 'STAFF')")
-    public ResponseEntity<CommonResponse> getCurrentQueuePosition(
+    public ResponseEntity<CommonResponse> getQueuePosition(
             @Parameter(description = "ID of the order to check queue position")
             @PathVariable @NotBlank(message = "Order ID is required") String orderId) {
         return ResponseEntity.ok(orderService.getCurrentQueuePosition(orderId));
